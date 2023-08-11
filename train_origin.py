@@ -6,9 +6,9 @@ from tqdm import tqdm
 from PIL import Image
 
 
-from origin_model import Fusionmodel
+from model_origin import Fusionmodel
 from ssim import SSIM 
-from utils import mkdir, gradient, hist_similar, LoadDataset
+from utils_origin import mkdir, gradient, hist_similar, view_img, CustomVisionDataset
 import os
 import time
 from loss_network import LossNetwork
@@ -16,30 +16,21 @@ from loss_network import LossNetwork
 
 def train():
     save_name = "Training_"
-
-    #COCO dataset
-    IR_images = '/storage/locnx/train2014/'
-    VIS_images = '/storage/locnx/train2014/'
-
     train_path = './train_origin_result/'
-    epochs = 10
-    batch_size = 8
+    epochs = 20
+    batch_size = 64
     print("epochs",epochs,"batch_size",batch_size)
     device = 'cuda'
     lr = 1e-3
-    lambd = 1
-    im = Image.open('/storage/locnx/train2014/COCO_train2014_000000581880.jpg')
-    true_size = im.size
 
-    data = LoadDataset(VIS_images,IR_images, cropsize= true_size, gray = True)
-    train_dataloader = DataLoader(data, batch_size = batch_size, shuffle=False)
+    dataset = CustomVisionDataset('/storage/locnx/train2014')
+    train_dataloader = DataLoader(dataset, shuffle=False)
 
     fusion_model = Fusionmodel().to(device)
     print(fusion_model)
     optimizer = optim.Adam(fusion_model.parameters(), lr = lr)
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.5, patience=10,
         verbose=False, threshold=0.0001, threshold_mode='rel', cooldown=0, min_lr=0, eps=1e-10)
-
 
     MSE_fun = nn.MSELoss()
     SSIM_fun = SSIM()
@@ -80,22 +71,22 @@ def train():
         tqdms = tqdm(range(int(steps)))
 
         for index in tqdms:
-            imgs = next(imgs_T)
-            vis_img = imgs[0].to(device)
-            ir_img = imgs[1].to(device)
+            img_vis_ir = next(imgs_T)
+            img_vis = img_vis_ir[0].to(device)
+            img_ir = img_vis_ir[1].to(device)
             
             optimizer.zero_grad()
 
-            img_re = fusion_model(vis_img, ir_img)
+            img_re = fusion_model(img_vis, img_ir)
 
-            mse_loss = MSE_fun(vis_img,img_re)
-            grd_loss = MSE_fun(gradient(vis_img), gradient(img_re))
-            hist_loss = hist_similar(vis_img, img_re.detach()) * 0.001
-            std_loss = torch.abs(img_re.std() - vis_img.std())
+            mse_loss = MSE_fun(img_ir,img_re)
+            grd_loss = MSE_fun(gradient(img_ir), gradient(img_re))
+            hist_loss = hist_similar(img_ir, img_re.detach()) * 0.001
+            std_loss = torch.abs(img_re.std() - img_ir.std())
             std_loss = hist_loss
 
             with torch.no_grad():
-                x = vis_img.detach()
+                x = img_ir.detach()
             features = loss_network(x)
             features_re = loss_network(img_re)
 

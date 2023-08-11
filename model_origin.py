@@ -5,7 +5,7 @@ from torchsummary import summary
 import numpy as np
 import torch.nn.functional as F
 
-Activate = new
+# Activate = new
 
 # Convolution operation
 class ConvLayer(torch.nn.Module):
@@ -123,7 +123,8 @@ class Fusionmodel(nn.Module):
         
     def forward(self,x,y):
         x = self.encoder1(x)
-        out = self.fusion(x,x)
+        y = self.encoder1(y)
+        out = self.fusion(x,y)
         out = self.decoder(out)
         return out
 

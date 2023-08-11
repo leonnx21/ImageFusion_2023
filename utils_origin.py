@@ -28,26 +28,17 @@ def make_dataset(root: str) -> list:
     dataset = []
 
     # Our dir names
-    vis_dir = 'VIS'
-    ir_dir = 'IR'   
+    vis_dir = ''
+    ir_dir = ''   
     
-    # Get all the filenames from RGB folder
-    vis_fnames = sorted(os.listdir(os.path.join(root, vis_dir)))
-    
+ 
     # Compare file names from GT folder to file names from RGB:
-    for ir_fname in sorted(os.listdir(os.path.join(root, ir_dir))):
-
-            if ir_fname in vis_fnames:
-                # if we have a match - create pair of full path to the corresponding images
-                vis_path = os.path.join(root, vis_dir, ir_fname)
-                ir_path = os.path.join(root, ir_dir, ir_fname)
-
-                item = (vis_path, ir_path)
-                # append to the list dataset
-                dataset.append(item)
-            else:
-                continue
-
+    for vis_name in sorted(os.listdir(root)):
+        vis_path = os.path.join(root, vis_name)
+        item = (vis_path, vis_path)
+        # append to the list dataset
+        dataset.append(item)
+        
     return dataset
 
 class CustomVisionDataset(VisionDataset):
