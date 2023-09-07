@@ -4,7 +4,6 @@ import torch.nn as nn
 from torchsummary import summary
 import torch.nn.functional as F
 
-#new densefuse implementation
 class Encoder0(nn.Module):
     def __init__(self):
         super(Encoder0,self).__init__()
@@ -27,51 +26,26 @@ class Encoder0(nn.Module):
         # print(x_d.shape)
         return x_d
 
-
-class EncoderIF(nn.Module):
+class Encoder1(nn.Module):
     def __init__(self):
-        super(EncoderIF,self).__init__()
+        super(Encoder1,self).__init__()
         self.layers = nn.Sequential()
         self.layers.add_module('ConvIF2', nn.Conv2d(3, 32, 3, 1 , 1))
-        self.layers.add_module('MaxpoolIF2', nn.MaxPool2d(4, stride=1, padding=2))
+        # self.layers.add_module('MaxpoolIF2', nn.MaxPool2d(3, stride=1, padding=1))
         self.layers.add_module('ActIF2' , nn.ReLU())
         self.layers.add_module('ConvIF3', nn.Conv2d(32, 64, 3, 1, 1))
-        self.layers.add_module('MaxpoolIF3', nn.MaxPool2d(4,stride=1,padding=2))
+        # self.layers.add_module('MaxpoolIF3', nn.MaxPool2d(3,stride=1,padding=1))
         self.layers.add_module('ActIF3' , nn.ReLU())
         self.layers.add_module('ConvIF4', nn.Conv2d(64, 128, 3, 1, 1))
-        self.layers.add_module('MaxpoolIF4', nn.MaxPool2d(4,stride=1,padding=1))
+        # self.layers.add_module('MaxpoolIF4', nn.MaxPool2d(3,stride=1,padding=1))
         self.layers.add_module('ActIF4' , nn.ReLU())
-        self.layers.add_module('ConvIF5', nn.Conv2d(128, 1, 3, 1, 1))
-        self.layers.add_module('MaxpoolIF5', nn.MaxPool2d(4,stride=1,padding=1))
+        self.layers.add_module('ConvIF5', nn.Conv2d(128, 64, 3, 1, 1))
+        # self.layers.add_module('MaxpoolIF5', nn.MaxPool2d(3,stride=1,padding=1))
         self.layers.add_module('ActIF5' , nn.ReLU())
 
     def forward(self, x):
         return self.layers(x)
 
-
-
-class EncoderVIS(nn.Module):
-    def __init__(self):
-        super(EncoderVIS,self).__init__()
-        self.layers = nn.Sequential()
-        self.layers.add_module('ConvVI2', nn.Conv2d(3, 32, 3, 1 , 1))
-        self.layers.add_module('MaxpoolVI2', nn.MaxPool2d(4, stride=1, padding=2))
-        self.layers.add_module('ActVI2' , nn.ReLU())
-
-        self.layers.add_module('ConvVI3', nn.Conv2d(32, 64, 3, 1, 1))
-        self.layers.add_module('MaxpoolVI3', nn.MaxPool2d(4,stride=1,padding=2))
-        self.layers.add_module('ActVI3' , nn.ReLU())
-
-        self.layers.add_module('ConvVI4', nn.Conv2d(64, 128, 3, 1, 1))
-        self.layers.add_module('MaxpoolVI4', nn.MaxPool2d(4,stride=1,padding=1))
-        self.layers.add_module('ActVI4' , nn.ReLU())
-
-        self.layers.add_module('ConvVI5', nn.Conv2d(128, 1, 3, 1, 1))
-        self.layers.add_module('MaxpoolVI5', nn.MaxPool2d(4,stride=1,padding=1))
-        self.layers.add_module('ActVI5' , nn.ReLU())
-
-    def forward(self, x):
-        return self.layers(x)
 
 class Fusion_method(nn.Module):
     def __init__(self):
@@ -86,12 +60,12 @@ class Fusion_method(nn.Module):
     def max_fc(self, vis1, vis2, ir1, ir2):
         vis = torch.maximum(vis1, vis2)
         ir = torch.maximum(ir1, ir2)
-        out = (vis+ir)/2
+        out = torch.maximum(vis, ir)
 
         return out
 
     def forward(self, vis1, vis2, ir1, ir2):
-        out = self.max_fc(vis1, vis2, ir1, ir2)
+        out = self.addition(vis1, vis2, ir1, ir2)
         return out
 
 class No_fusion(nn.Module):
@@ -110,13 +84,15 @@ class Decoder0(nn.Module):
     def __init__(self):
         super(Decoder0,self).__init__()
         self.layers = nn.Sequential()
-        self.layers.add_module('ConvD2', nn.Conv2d(64,64,3,1,1))
+        self.layers.add_module('ConvD2', nn.Conv2d(64,128,3,1,1))
         self.layers.add_module('ActD2' , nn.ReLU())
-        self.layers.add_module('ConvD3', nn.Conv2d(64,32,3,1,1))
-        self.layers.add_module('ActD3' , nn.ReLU())        
-        self.layers.add_module('ConvD4', nn.Conv2d(32,16,3,1,1))
-        self.layers.add_module('ActD4' , nn.ReLU())
-        self.layers.add_module('ConvD5', nn.Conv2d(16,3,3,1,1))
+        self.layers.add_module('ConvD3', nn.Conv2d(128,64,3,1,1))
+        self.layers.add_module('ActD3' , nn.ReLU())   
+        self.layers.add_module('ConvD4', nn.Conv2d(64,32,3,1,1))
+        self.layers.add_module('ActD4' , nn.ReLU())     
+        self.layers.add_module('ConvD5', nn.Conv2d(32,16,3,1,1))
+        self.layers.add_module('ActD5' , nn.ReLU())
+        self.layers.add_module('ConvD6', nn.Conv2d(16,3,3,1,1))
         
     def forward(self, x):
         return self.layers(x)
@@ -125,23 +101,24 @@ class Fusionmodel(nn.Module):
     
     def __init__(self):
         super(Fusionmodel,self).__init__()
-        self.encoder0 = Encoder0()
-        self.encodervis = EncoderVIS()
-        self.encoderif = EncoderIF()
+        self.encodervis1 = Encoder0()
+        self.encodervis2 = Encoder1()
+        self.encoderir1 = Encoder0()
+        self.encoderir2 = Encoder1()
         self.fusion = Fusion_method()
         self.decoder0 = Decoder0()
         
     def forward(self,x,y):
-        vis1 = self.encoder0(x)
-        vis2 = self.encodervis(x)
-        ir1 = self.encoder0(y)
-        ir2 = self.encoderif(y)
+        vis1 = self.encodervis1(x)
+        vis2 = self.encodervis2(x)
+        ir1 = self.encoderir1(y)
+        ir2 = self.encoderir2(y)
         z1 = self.fusion(vis1, vis2, ir1, ir2)
         z2 = self.decoder0(z1)
         return z2
 
 if __name__ == '__main__':
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu") 
-    model = Fusionmodel().to(device)
+    # device = torch.device("cuda" if torch.cuda.is_available() else "cpu") 
+    model = Fusionmodel().to('cpu')
     summary(model,input_size=[(3, 128, 128), (3, 128, 128)])
 

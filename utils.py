@@ -33,6 +33,62 @@ def make_dataset(root: str, sub1: str, sub2: str) -> list:
     return dataset
 
 
+class CustomVisionDataset_train_visdrone(VisionDataset):
+    def __init__(self,
+                 root,
+                 subfolder1,
+                 subfolder2,
+                 loader=default_loader):
+        super().__init__(root)
+
+        # Prepare dataset
+        samples = make_dataset(self.root, subfolder1, subfolder2)
+
+        self.loader = loader
+        self.samples = samples
+        # list of RGB images
+        self.vis_samples = [s[1] for s in samples]
+        # list of GT images
+        self.ir_samples = [s[1] for s in samples]
+        
+        self.transform = transforms.Compose([
+            # transforms.CenterCrop(800),
+            # transforms.Resize(256),
+            transforms.CenterCrop(256),
+            transforms.ToTensor(),
+        ])
+
+    def __getitem__(self, index):
+        """Returns a data sample from our dataset.
+        """
+        # getting our paths to images
+        vis_path, ir_path = self.samples[index]
+        
+        # import each image using loader (by default it's PIL)
+        vis_sample = self.loader(vis_path)
+        ir_sample = self.loader(ir_path)
+        
+        # vis_sample = vis_sample.convert('L')
+        ir_sample = ir_sample.convert('L')
+        ir_sample = np.stack((ir_sample,)*3, axis=-1)
+        ir_sample = Image.fromarray(ir_sample.astype('uint8'))
+
+        # here goes tranforms if needed
+        # maybe we need different tranforms for each type of image
+        vis_sample = self.transform(vis_sample)
+        ir_sample = self.transform(ir_sample)
+        
+        #get name for sure
+        vis_name = Path(vis_path).name
+        ir_name = Path(ir_path).name
+
+        # now we return the right imported pair of images (tensors)
+        return vis_sample, ir_sample, vis_name, ir_name
+
+    def __len__(self):
+        return len(self.samples)
+
+
 class CustomVisionDataset_train(VisionDataset):
     def __init__(self,
                  root,
