@@ -1,5 +1,5 @@
 from torchmetrics.image import StructuralSimilarityIndexMeasure, PeakSignalNoiseRatio, MultiScaleStructuralSimilarityIndexMeasure
-from torchmetrics.image import TotalVariation, ErrorRelativeGlobalDimensionlessSynthesis
+from torchmetrics.image import ErrorRelativeGlobalDimensionlessSynthesis
 
 
 def loss_function(vis_image, ir_image ,output_image, device):

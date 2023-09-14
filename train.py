@@ -1,6 +1,6 @@
 import os
 import torch
-from utils import mkdir, CustomVisionDataset_train
+from utils import mkdir
 from loss_fn import loss_function
 from torch.utils.tensorboard import SummaryWriter
 from datetime import datetime
@@ -12,26 +12,12 @@ from datetime import datetime
 
 ################################################################
 
-# PyTorch TensorBoard support
-
 # Optimizers specified in the torch.optim package
 # optimizer = torch.optim.SGD(model.parameters(), lr=0.001, momentum=0.9)
 
 def train_one_epoch(name, model, training_loader, epoch_index, tb_writer, optimizer, device, report_freq):
-    running_loss = 0.
-    last_loss = 0.
-
-    running_loss_ssim = 0.
-    last_loss_ssim = 0.
-
-    running_loss_msssim = 0.
-    last_loss_msssim = 0.
-
-    running_loss_psnr = 0.
-    last_loss_psnr = 0.
-
-    running_loss_egras = 0.
-    last_loss_egras = 0.
+    running_loss_details = [0., 0., 0., 0., 0.]
+    last_loss_details = [0., 0. , 0., 0., 0.]
 
     # Here, we use enumerate(training_loader) instead of
     # iter(training_loader) so that we can track the batch
@@ -49,41 +35,43 @@ def train_one_epoch(name, model, training_loader, epoch_index, tb_writer, optimi
         outputs = model(vis_image, ir_image)
 
         # Compute the loss and its gradients
-        loss, ssim_loss_avg, ms_ssim_loss_avg, psnr_loss_avg, egras_loss_avg = loss_function(vis_image, ir_image, outputs, device)
-        loss.backward()
+        loss0, loss1, loss2, loss3, loss4 = loss_function(vis_image, ir_image, outputs, device)
+
+        loss0.backward()
 
         # Adjust learning weights
         optimizer.step()
 
         # Gather data and report
-        running_loss += loss.item()
-        running_loss_ssim += ssim_loss_avg.item()
-        running_loss_msssim += ms_ssim_loss_avg.item()
-        running_loss_psnr += psnr_loss_avg.item()
-        running_loss_egras += egras_loss_avg.item()
+        running_loss_details[0] += loss0
+        running_loss_details[1] += loss1
+        running_loss_details[2] += loss2
+        running_loss_details[3] += loss3
+        running_loss_details[4] += loss4
+
         
         if i % report_freq == (report_freq-1):
-            last_loss = running_loss / report_freq # loss per batch
-            last_loss_ssim = running_loss_ssim / report_freq
-            last_loss_msssim = running_loss_msssim / report_freq
-            last_loss_psnr = running_loss_psnr / report_freq  
-            last_loss_egras = running_loss_egras / report_freq
+            last_loss_details[0] = running_loss_details[0] / report_freq # loss per batch
+            last_loss_details[1] = running_loss_details[1] / report_freq 
+            last_loss_details[2] = running_loss_details[2] / report_freq 
+            last_loss_details[3] = running_loss_details[3] / report_freq 
+            last_loss_details[4] = running_loss_details[4] / report_freq 
 
-            print(name + ' Epoch {} Batch {} train_loss: {}'.format(epoch_index + 1, i + 1, last_loss))
+            print(name + ' Epoch {} Batch {} train_loss: {}'.format(epoch_index + 1, i + 1, last_loss_details[0]))
             
             tb_x = epoch_index * len(training_loader) + i + 1 
-            tb_writer.add_scalar('Loss/Train', last_loss, tb_x)
-            tb_writer.add_scalars('Loss/Detail',{'Loss' : last_loss, 'Loss_ssim' : last_loss_ssim, 'Loss_msssim' : last_loss_msssim, 'Loss_psnr' : last_loss_psnr, 'Egras_loss': last_loss_egras}, tb_x)
+            tb_writer.add_scalar('Loss/Train', last_loss_details[0], tb_x)
+            tb_writer.add_scalars('Loss/Detail',{'Loss0' : last_loss_details[0], 'Loss1' : last_loss_details[1], 'Loss2' : last_loss_details[2], 'Loss3' : last_loss_details[3], 'Loss4': last_loss_details[4]}, tb_x)
             
-            running_loss = 0.
-            running_loss_ssim = 0.
-            running_loss_msssim = 0.
-            running_loss_psnr = 0.
-            running_loss_egras = 0.
+            running_loss_details[0] = 0.
+            running_loss_details[1] = 0.
+            running_loss_details[2] = 0.
+            running_loss_details[3] = 0.
+            running_loss_details[4] = 0.
 
         # print("success training")
 
-    return last_loss
+    return last_loss_details[0]
 
 def validation_function(name, model, validation_loader, device, epoch_number, report_freq):
     running_vloss = 0.
@@ -96,7 +84,7 @@ def validation_function(name, model, validation_loader, device, epoch_number, re
             ir_image = ir_image.to(device)
 
             voutputs = model(vis_image, ir_image)
-            vloss, ssim_loss_avg, ms_ssim_loss_avg, psnr_loss_avg, egras_loss_avg = loss_function(vis_image, ir_image, voutputs, device)            
+            vloss, loss1, loss2, loss3, loss4 = loss_function(vis_image, ir_image, voutputs, device)            
             
             running_vloss += vloss.item()
 
@@ -153,6 +141,9 @@ def train(name, model, train_path, writer_path, training_loader, validation_load
             model_tpath = os.path.join(train_path,'model_best_train_{}_{}'.format(timestamp, epoch_number))
             torch.save(model.state_dict(), model_tpath)
             print("model saved: "+model_tpath)
+
+        model_tpath2 = os.path.join(train_path,'model_train_{}_{}'.format(timestamp, epoch_number))
+        torch.save(model.state_dict(), model_tpath2)
 
         epoch_number += 1
 

@@ -1,4 +1,4 @@
-name: pytorche2
+name: pytorche3
 channels:
   - pytorch
   - defaults
@@ -191,6 +191,7 @@ dependencies:
   - python-json-logger=2.0.7=py310h06a4308_0
   - python-tzdata=2023.3=pyhd3eb1b0_0
   - python_abi=3.10=2_cp310
+  - pytorch=1.12.1=cpu_py310h9dbd814_1
   - pytz=2022.7=py310h06a4308_0
   - pyu2f=0.1.5=pyhd8ed1ab_0
   - pyyaml=6.0=py310h5eee18b_1
@@ -248,7 +249,6 @@ dependencies:
   - zstd=1.5.5=hc292b87_0
   - pip:
       - grpcio==1.57.0
-      - piq==0.8.0
       - protobuf==4.24.2
       - pyasn1==0.5.0
       - pyasn1-modules==0.3.0
@@ -261,4 +261,4 @@ dependencies:
       - torchaudio==0.12.0+cu113
       - torchsummary==1.5.1
       - torchvision==0.13.0+cu113
-prefix: /home/locnx/anaconda3/envs/pytorche2
+prefix: /home/locnx/anaconda3/envs/pytorche3

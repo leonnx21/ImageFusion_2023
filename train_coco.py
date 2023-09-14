@@ -26,16 +26,17 @@ if __name__ == '__main__':
 
     optimizer = torch.optim.Adam(model.parameters(), lr = lr)
 
-    # training_loader = loader_function( '/storage/locnx/COCO2014/', '1000files', '1000files', batchsize=batchsize, num_samples=0)
-    # validation_loader = loader_function('/storage/locnx/COCO2014/', '100vals', '100vals', batchsize=batchsize, num_samples=0)
-    # train_path = './COCO2014/trained_model/'
-    # writer_path = './COCO2014/stats/'
+    training_loader = loader_function( '/storage/locnx/COCO2014/', '1000files', '1000files', batchsize=batchsize, num_samples=0)
+    validation_loader = loader_function('/storage/locnx/COCO2014/', '100vals', '100vals', batchsize=batchsize, num_samples=0)
+    train_path = './COCO2014_3/trained_model/'
+    writer_path = './COCO2014_3/stats/'
+    name = 'COCO2014_3'
 
-    training_loader = loader_function('/storage/locnx/COCO2014/', 'train2014', 'train2014', batchsize=batchsize, num_samples=0)
-    validation_loader = loader_function('/storage/locnx/COCO2014/', 'val2014', 'val2014', batchsize=batchsize, num_samples=2000)
-    train_path = './COCO2014_2/trained_model/'
-    writer_path = './COCO2014_2/stats/'
-    name = 'COCO2014_2'
+    # training_loader = loader_function('/storage/locnx/COCO2014/', 'train2014', 'train2014', batchsize=batchsize, num_samples=0)
+    # validation_loader = loader_function('/storage/locnx/COCO2014/', 'val2014', 'val2014', batchsize=batchsize, num_samples=2000)
+    # train_path = './COCO2014_3/trained_model/'
+    # writer_path = './COCO2014_3/stats/'
+    # name = 'COCO2014_3'
 
     train(name, model, train_path, writer_path, training_loader, validation_loader, optimizer, epoch, device, report_freq)
 
