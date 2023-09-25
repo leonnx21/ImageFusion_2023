@@ -45,11 +45,11 @@ def train_one_epoch(name, model, training_loader, epoch_index, tb_writer, optimi
         optimizer.step()
 
         # Gather data and report
-        training_loss += loss0
-        running_loss_details[0] += loss0
-        running_loss_details[1] += loss1
-        running_loss_details[2] += loss2
-        running_loss_details[3] += loss3
+        training_loss += loss0.item()
+        running_loss_details[0] += loss0.item()
+        running_loss_details[1] += loss1.item()
+        running_loss_details[2] += loss2.item()
+        running_loss_details[3] += loss3.item()
 
         
         if i % report_freq == (report_freq-1):
@@ -63,21 +63,20 @@ def train_one_epoch(name, model, training_loader, epoch_index, tb_writer, optimi
             tb_x = epoch_index * len(training_loader) + i + 1 
             tb_writer.add_scalar('Loss/Train', last_loss_details[0], tb_x)
             tb_writer.add_scalars('Loss/Detail_Train',{'Loss0' : last_loss_details[0], 'Loss1' : last_loss_details[1], 'Loss2' : last_loss_details[2], 'Loss3' : last_loss_details[3]}, tb_x)
-            
+            tb_writer.flush()
+
             running_loss_details[0] = 0.
             running_loss_details[1] = 0.
             running_loss_details[2] = 0.
             running_loss_details[3] = 0.
 
-        #report last 2000 sample as validation
-        if i % 2000 == (2000-1):
-            training_loss_avg = training_loss/2000
-
-            training_loss = 0.
+        #report last average traing loss validation
+        training_loss_avg = training_loss/(i+1)
+        training_loss = 0.
 
         # print("success training")
 
-    return training_loss_avg
+    return training_loss_avg, last_loss_details[0]
 
 def validation_function(name, model, validation_loader, loss_function, device, epoch_number, tb_writer, report_freq):
     running_vloss_details = [0., 0., 0., 0.]
@@ -96,11 +95,11 @@ def validation_function(name, model, validation_loader, loss_function, device, e
             vloss0, vloss1, vloss2, vloss3 = loss_function(vis_image, ir_image, voutputs, device)            
             
             # Gather data and report
-            validation_loss += vloss0
-            running_vloss_details[0] += vloss0
-            running_vloss_details[1] += vloss1
-            running_vloss_details[2] += vloss2
-            running_vloss_details[3] += vloss3
+            validation_loss += vloss0.item()
+            running_vloss_details[0] += vloss0.item()
+            running_vloss_details[1] += vloss1.item()
+            running_vloss_details[2] += vloss2.item()
+            running_vloss_details[3] += vloss3.item()
             
             if i % report_freq == (report_freq-1):
                 last_vloss_details[0] = running_vloss_details[0] / report_freq # loss per batch
@@ -113,6 +112,7 @@ def validation_function(name, model, validation_loader, loss_function, device, e
                 tb_x = epoch_number * len(validation_loader) + i + 1 
                 tb_writer.add_scalar('Loss/Validation', last_vloss_details[0], tb_x)
                 tb_writer.add_scalars('Loss/Detail_Validation',{'Loss0' : last_vloss_details[0], 'Loss1' : last_vloss_details[1], 'Loss2' : last_vloss_details[2], 'Loss3' : last_vloss_details[3]}, tb_x)
+                tb_writer.flush()
 
                 running_vloss_details[0] = 0.
                 running_vloss_details[1] = 0.
@@ -120,6 +120,7 @@ def validation_function(name, model, validation_loader, loss_function, device, e
                 running_vloss_details[3] = 0.
 
     avg_vloss = validation_loss / (i + 1)
+    validation_loss = 0.
 
     return avg_vloss
 
@@ -146,7 +147,7 @@ def train(name, model, train_path, writer_path, training_loader, validation_load
         # Make sure gradient tracking is on, and do a pass over the data
         
         model.train(True)
-        avg_loss = train_one_epoch(name, model, training_loader, epoch_number, writer, optimizer, loss_function, device, report_freq)
+        avg_loss, last_loss = train_one_epoch(name, model, training_loader, epoch_number, writer, optimizer, loss_function, device, report_freq)
         
         # Set the model to evaluation mode, disabling dropout and using population
         # statistics for batch normalization.
@@ -159,8 +160,11 @@ def train(name, model, train_path, writer_path, training_loader, validation_load
         # Log the running loss averaged per batch
         # for both training and validation
         writer.add_scalars('Training vs. Validation Loss',
-                        { 'Training' : avg_loss, 'Validation' : avg_vloss },
+                        { 'Avg_Training' : avg_loss,'Last_Training': last_loss, 'Validation' : avg_vloss },
                         epoch_number + 1)
+        # writer.add_scalars('Training Validation Loss gap',
+        #                 { 'Training minus Validation' : avg_loss - avg_vloss},
+        #                 epoch_number + 1)
         writer.flush()
 
         # Track best performance, and save the model's state

@@ -6,13 +6,13 @@ import torch.nn.functional as F
 class Encoder0(nn.Module):
     def __init__(self):
         super(Encoder0,self).__init__()
-        self.ConvE01 = nn.Conv2d(3, 8, 3, 1, 1)
+        self.ConvE01 = nn.Conv2d(3, 16, 3, 1, 1)
         self.Activate  = nn.ReLU()
-        self.Conv_E02 = nn.Conv2d(8, 4, 3, 1, 1)
+        self.Conv_E02 = nn.Conv2d(16, 8, 3, 1, 1)
         self.layers = nn.ModuleDict({
-            'DenseConv1': nn.Conv2d(4,4,3,1,1),
-            'DenseConv2': nn.Conv2d(8,4,3,1,1),
-            'DenseConv3': nn.Conv2d(12,4,3,1,1)
+            'DenseConv1': nn.Conv2d(8,8,3,1,1),
+            'DenseConv2': nn.Conv2d(16,8,3,1,1),
+            'DenseConv3': nn.Conv2d(24,8,3,1,1)
         })
 
     def forward(self, x):
@@ -29,10 +29,10 @@ class Encoder1(nn.Module):
     def __init__(self):
         super(Encoder1,self).__init__()
         self.layers = nn.Sequential()
-        self.layers.add_module('ConvE11', nn.Conv2d(3, 8, 3, 1 , 1, padding_mode='replicate'))
+        self.layers.add_module('ConvE11', nn.Conv2d(3, 16, 3, 1 , 1, padding_mode='replicate'))
         self.layers.add_module('MaxpoolE11', nn.MaxPool2d(3, stride=1, padding=1))
         self.layers.add_module('ActE11' , nn.ReLU())
-        self.layers.add_module('ConvE12', nn.Conv2d(8, 16, 3, 1, 1, padding_mode='replicate'))
+        self.layers.add_module('ConvE12', nn.Conv2d(16, 32, 3, 1, 1, padding_mode='replicate'))
         self.layers.add_module('MaxpoolE12', nn.MaxPool2d(3,stride=1,padding=1))
         self.layers.add_module('ActE12' , nn.ReLU())
         # self.layers.add_module('ConvIF4', nn.Conv2d(64, 128, 3, 1, 1, padding_mode='replicate'))
@@ -111,7 +111,7 @@ class Mix_method(nn.Module):
 
         # flatten
         out = out.view(batchsize, num_channels, height, width)
-        out0, out1, out2, out3 = torch.split(out, 16, dim=1)
+        out0, out1, out2, out3 = torch.split(out, 32, dim=1)
 
         return out0, out1, out2, out3
 
@@ -124,9 +124,9 @@ class Silo_fusion(nn.Module):
     def __init__(self):
         super(Silo_fusion, self).__init__()
         self.layers = nn.Sequential()
-        self.layers.add_module('ConvE21', nn.Conv2d(16, 8, 3, 1 , 1, padding_mode='replicate'))
+        self.layers.add_module('ConvE21', nn.Conv2d(32, 16, 3, 1 , 1, padding_mode='replicate'))
         self.layers.add_module('ActE21' , nn.ReLU())
-        self.layers.add_module('ConvE22', nn.Conv2d(8, 4, 3, 1 , 1, padding_mode='replicate'))
+        self.layers.add_module('ConvE22', nn.Conv2d(16, 8, 3, 1 , 1, padding_mode='replicate'))
         self.layers.add_module('ActE22' , nn.ReLU())
 
     def forward(self, x):
@@ -139,7 +139,7 @@ class Decoder0(nn.Module):
         self.layers = nn.Sequential()
         # self.layers.add_module('ConvD2', nn.Conv2d(64,128,3,1,1))
         # self.layers.add_module('ActD2' , nn.ReLU())
-        self.layers.add_module('ConvD3', nn.Conv2d(16,32,3,1,1))
+        self.layers.add_module('ConvD3', nn.Conv2d(32,32,3,1,1))
         self.layers.add_module('ActD3' , nn.ReLU())   
         self.layers.add_module('ConvD4', nn.Conv2d(32,16,3,1,1))
         self.layers.add_module('ActD4' , nn.ReLU())     
@@ -183,7 +183,7 @@ class Fusionmodel(nn.Module):
 if __name__ == '__main__':
     # device = torch.device("cuda" if torch.cuda.is_available() else "cpu") 
     model = Fusionmodel().to('cpu')
-    summary(model,input_data=[(3, 256, 256), (3, 256, 256)], col_names=["input_size", "output_size", "num_params", "kernel_size"], depth=4,  device = 'cpu')
+    summary(model,input_data=[(3, 256, 256), (3, 256, 256)], col_names=["input_size", "output_size", "num_params", "kernel_size"], depth=1,  device = 'cpu')
 
 
 
