@@ -16,7 +16,7 @@ class CustomLoss(nn.Module):
 
             ssim_loss = 1 - SSIM_func(output, input)
             ms_ssim_loss = 1 - MS_SSIM_func(output, input)
-            psnr_loss = 1 - PSNR_func(output, input)/20 #minimum 20 decibel
+            psnr_loss = 1 - PSNR_func(output, input)/30 #minimum 20 decibel
             # egras_loss = egras_func(output, input)
             # vif_loss = piq.VIFLoss(sigma_n_sq=2.0, data_range=256.)(input, output)
 
