@@ -48,7 +48,7 @@ class CustomVisionDataset_train(VisionDataset):
         self.loader = loader
         self.samples = samples
         # list of RGB images
-        self.vis_samples = [s[1] for s in samples]
+        self.vis_samples = [s[0] for s in samples]
         # list of GT images
         self.ir_samples = [s[1] for s in samples]
         
@@ -102,7 +102,7 @@ class CustomVisionDataset_test(VisionDataset):
         self.loader = loader
         self.samples = samples
         # list of RGB images
-        self.vis_samples = [s[1] for s in samples]
+        self.vis_samples = [s[0] for s in samples]
         # list of GT images
         self.ir_samples = [s[1] for s in samples]
         

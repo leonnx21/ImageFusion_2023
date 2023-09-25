@@ -1,7 +1,6 @@
 import os
 import torch
 from utils import mkdir
-from loss_fn import loss_function
 from torch.utils.tensorboard import SummaryWriter
 from datetime import datetime
 
@@ -15,9 +14,12 @@ from datetime import datetime
 # Optimizers specified in the torch.optim package
 # optimizer = torch.optim.SGD(model.parameters(), lr=0.001, momentum=0.9)
 
-def train_one_epoch(name, model, training_loader, epoch_index, tb_writer, optimizer, device, report_freq):
-    running_loss_details = [0., 0., 0., 0., 0.]
-    last_loss_details = [0., 0. , 0., 0., 0.]
+def train_one_epoch(name, model, training_loader, epoch_index, tb_writer, optimizer, loss_function, device, report_freq):
+    running_loss_details = [0., 0., 0., 0.]
+    last_loss_details = [0., 0., 0., 0.]
+    
+    training_loss = 0.
+    training_loss_avg = 0.
 
     # Here, we use enumerate(training_loader) instead of
     # iter(training_loader) so that we can track the batch
@@ -35,7 +37,7 @@ def train_one_epoch(name, model, training_loader, epoch_index, tb_writer, optimi
         outputs = model(vis_image, ir_image)
 
         # Compute the loss and its gradients
-        loss0, loss1, loss2, loss3, loss4 = loss_function(vis_image, ir_image, outputs, device)
+        loss0, loss1, loss2, loss3 = loss_function(vis_image, ir_image, outputs, device)
 
         loss0.backward()
 
@@ -43,11 +45,11 @@ def train_one_epoch(name, model, training_loader, epoch_index, tb_writer, optimi
         optimizer.step()
 
         # Gather data and report
+        training_loss += loss0
         running_loss_details[0] += loss0
         running_loss_details[1] += loss1
         running_loss_details[2] += loss2
         running_loss_details[3] += loss3
-        running_loss_details[4] += loss4
 
         
         if i % report_freq == (report_freq-1):
@@ -55,27 +57,34 @@ def train_one_epoch(name, model, training_loader, epoch_index, tb_writer, optimi
             last_loss_details[1] = running_loss_details[1] / report_freq 
             last_loss_details[2] = running_loss_details[2] / report_freq 
             last_loss_details[3] = running_loss_details[3] / report_freq 
-            last_loss_details[4] = running_loss_details[4] / report_freq 
 
             print(name + ' Epoch {} Batch {} train_loss: {}'.format(epoch_index + 1, i + 1, last_loss_details[0]))
             
             tb_x = epoch_index * len(training_loader) + i + 1 
             tb_writer.add_scalar('Loss/Train', last_loss_details[0], tb_x)
-            tb_writer.add_scalars('Loss/Detail',{'Loss0' : last_loss_details[0], 'Loss1' : last_loss_details[1], 'Loss2' : last_loss_details[2], 'Loss3' : last_loss_details[3], 'Loss4': last_loss_details[4]}, tb_x)
+            tb_writer.add_scalars('Loss/Detail_Train',{'Loss0' : last_loss_details[0], 'Loss1' : last_loss_details[1], 'Loss2' : last_loss_details[2], 'Loss3' : last_loss_details[3]}, tb_x)
             
             running_loss_details[0] = 0.
             running_loss_details[1] = 0.
             running_loss_details[2] = 0.
             running_loss_details[3] = 0.
-            running_loss_details[4] = 0.
+
+        #report last 2000 sample as validation
+        if i % 2000 == (2000-1):
+            training_loss_avg = training_loss/2000
+
+            training_loss = 0.
 
         # print("success training")
 
-    return last_loss_details[0]
+    return training_loss_avg
 
-def validation_function(name, model, validation_loader, device, epoch_number, report_freq):
-    running_vloss = 0.
-    
+def validation_function(name, model, validation_loader, loss_function, device, epoch_number, tb_writer, report_freq):
+    running_vloss_details = [0., 0., 0., 0.]
+    last_vloss_details = [0., 0., 0., 0.]
+
+    validation_loss = 0.
+        
     # Disable gradient computation and reduce memory consumption.
     with torch.no_grad():
         for i, vdata in enumerate(validation_loader):
@@ -84,22 +93,47 @@ def validation_function(name, model, validation_loader, device, epoch_number, re
             ir_image = ir_image.to(device)
 
             voutputs = model(vis_image, ir_image)
-            vloss, loss1, loss2, loss3, loss4 = loss_function(vis_image, ir_image, voutputs, device)            
+            vloss0, vloss1, vloss2, vloss3 = loss_function(vis_image, ir_image, voutputs, device)            
             
-            running_vloss += vloss.item()
-
+            # Gather data and report
+            validation_loss += vloss0
+            running_vloss_details[0] += vloss0
+            running_vloss_details[1] += vloss1
+            running_vloss_details[2] += vloss2
+            running_vloss_details[3] += vloss3
+            
             if i % report_freq == (report_freq-1):
+                last_vloss_details[0] = running_vloss_details[0] / report_freq # loss per batch
+                last_vloss_details[1] = running_vloss_details[1] / report_freq 
+                last_vloss_details[2] = running_vloss_details[2] / report_freq 
+                last_vloss_details[3] = running_vloss_details[3] / report_freq 
+
                 print(name+" Epoch {} validation Batch {}".format(epoch_number+1,i+1))
 
-    avg_vloss = running_vloss / (i + 1)
+                tb_x = epoch_number * len(validation_loader) + i + 1 
+                tb_writer.add_scalar('Loss/Validation', last_vloss_details[0], tb_x)
+                tb_writer.add_scalars('Loss/Detail_Validation',{'Loss0' : last_vloss_details[0], 'Loss1' : last_vloss_details[1], 'Loss2' : last_vloss_details[2], 'Loss3' : last_vloss_details[3]}, tb_x)
+
+                running_vloss_details[0] = 0.
+                running_vloss_details[1] = 0.
+                running_vloss_details[2] = 0.
+                running_vloss_details[3] = 0.
+
+    avg_vloss = validation_loss / (i + 1)
 
     return avg_vloss
 
-def train(name, model, train_path, writer_path, training_loader, validation_loader, optimizer, epoch, device, report_freq):
-    mkdir(train_path)
-
+def train(name, model, train_path, writer_path, training_loader, validation_loader, optimizer, loss_function, epoch, device, report_freq):
+    best_train_path = os.path.join(train_path,'best_train/')
+    best_val_path = os.path.join(train_path,'best_val/')
+    all_train_path = os.path.join(train_path,'all_train/')
+    
+    mkdir(best_train_path)
+    mkdir(best_val_path)
+    mkdir(all_train_path)
+    
     timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-    writer = SummaryWriter(writer_path+'fusion_trainer_{}'.format(timestamp))
+    writer = SummaryWriter(writer_path+'fusion_trainer_{}_{}'.format(name,timestamp))
     epoch_number = 0
 
     EPOCHS = epoch
@@ -112,15 +146,15 @@ def train(name, model, train_path, writer_path, training_loader, validation_load
         # Make sure gradient tracking is on, and do a pass over the data
         
         model.train(True)
-        avg_loss = train_one_epoch(name, model, training_loader, epoch_number, writer, optimizer, device, report_freq)
+        avg_loss = train_one_epoch(name, model, training_loader, epoch_number, writer, optimizer, loss_function, device, report_freq)
         
         # Set the model to evaluation mode, disabling dropout and using population
         # statistics for batch normalization.
     
         model.eval()
-        avg_vloss = validation_function(name, model, validation_loader, device, epoch_number,  report_freq)
+        avg_vloss = validation_function(name, model, validation_loader, loss_function, device, epoch_number, writer, report_freq)
 
-        print(name + ' LOSS train {} valid {}'.format(avg_loss, avg_vloss))
+        print(name + ' LOSS train {} validation {}'.format(avg_loss, avg_vloss))
 
         # Log the running loss averaged per batch
         # for both training and validation
@@ -132,44 +166,23 @@ def train(name, model, train_path, writer_path, training_loader, validation_load
         # Track best performance, and save the model's state
         if avg_vloss < best_vloss:
             best_vloss = avg_vloss            
-            model_vpath = os.path.join(train_path,'model_best_val_{}_{}'.format(timestamp, epoch_number))
+            model_vpath = os.path.join(train_path,'best_val/','model_best_val_{}_{}'.format(timestamp, epoch_number))
             torch.save(model.state_dict(), model_vpath)
             print("model saved: "+model_vpath)
 
         if avg_loss < best_loss:
             best_loss = avg_loss            
-            model_tpath = os.path.join(train_path,'model_best_train_{}_{}'.format(timestamp, epoch_number))
+            model_tpath = os.path.join(train_path,'best_train/','model_best_train_{}_{}'.format(timestamp, epoch_number))
             torch.save(model.state_dict(), model_tpath)
             print("model saved: "+model_tpath)
 
-        model_tpath2 = os.path.join(train_path,'model_train_{}_{}'.format(timestamp, epoch_number))
-        torch.save(model.state_dict(), model_tpath2)
+        # save all epoch for able to be resume
+        model_tpath2 = os.path.join(train_path,'all_train/','model_train_{}_{}'.format(timestamp, epoch_number))
+        torch.save({
+            'epoch': epoch_number,
+            'model_state_dict': model.state_dict(),
+            'optimizer_state_dict': optimizer.state_dict(),
+            'loss': avg_loss,
+            }, model_tpath2)
 
         epoch_number += 1
-
-# if __name__ == '__main__':
-
-#     device = 'cuda'
-#     model = Fusionmodel().to(device)
-#     lr = 1e-3
-#     epoch = 20
-#     batchsize = 4
-    
-#     #report batch
-#     report_freq = 10   
-
-#     optimizer = torch.optim.Adam(model.parameters(), lr = lr)
-
-#     # training_loader = loader_function( '/storage/locnx/COCO2014/', '1000files', '1000files', batchsize=batchsize, num_samples=0)
-#     # validation_loader = loader_function('/storage/locnx/COCO2014/', '100vals', '100vals', batchsize=batchsize, num_samples=0)
-#     # train_path = './COCO2014/trained_model/'
-#     # writer_path = './COCO2014/stats/'
-
-#     training_loader = loader_function('/storage/locnx/COCO2014/', 'train2014', 'train2014', batchsize=batchsize, num_samples=0)
-#     validation_loader = loader_function('/storage/locnx/COCO2014/', 'val2014', 'val2014', batchsize=batchsize, num_samples=2000)
-#     train_path = './COCO2014/trained_model/'
-#     writer_path = './COCO2014/stats/'
-
-#     train(model, train_path, writer_path, training_loader, validation_loader, optimizer, epoch, device, report_freq)
-
-    

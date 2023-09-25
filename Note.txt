@@ -1,0 +1,10 @@
+model_visdrone4 --> best, model multiply
+model_visdrone5 --> no fusion
+model_visdrone8 --> simplified, use addition
+Model_visdrone6- novel approach, swap channel
+Model_visdrone9 --> model switch to addition
+
+
+https://github.com/francois-rozet/piqa
+https://github.com/photosynthesis-team/piq
+https://github.com/chaofengc/Awesome-Image-Quality-Assessment

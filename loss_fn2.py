@@ -1,42 +1,50 @@
 from torchmetrics.image import StructuralSimilarityIndexMeasure, PeakSignalNoiseRatio, MultiScaleStructuralSimilarityIndexMeasure
-from torchmetrics.image import ErrorRelativeGlobalDimensionlessSynthesis
-import pyiqa
+import torch.nn as nn
+import torch
 
-def loss_function(vis_image, ir_image ,output_image, device):
-    
-    def loss_cal1(input, output, device):
-        SSIM_func = StructuralSimilarityIndexMeasure(data_range=1.0).to(device)
-        MS_SSIM_func = MultiScaleStructuralSimilarityIndexMeasure(data_range=1.0).to(device)
-        PSNR_func = PeakSignalNoiseRatio(data_range=1.0).to(device)
+class CustomLoss(nn.Module):
+    def __init__(self):
+            super(CustomLoss, self).__init__()
 
-        ssim_loss = (1 - SSIM_func(output, input))*100
-        ms_ssim_loss = (1- MS_SSIM_func(output, input))*100
-        psnr_loss = -PSNR_func(output, input)
+    def loss_function(self, vis_image, ir_image ,output_image, device):
 
-        return ssim_loss, ms_ssim_loss, psnr_loss
+        def loss_cal1(input, output, device):
+            SSIM_func = StructuralSimilarityIndexMeasure(data_range=1.0).to(device)
+            MS_SSIM_func = MultiScaleStructuralSimilarityIndexMeasure(data_range=1.0, normalize='relu').to(device)
+            PSNR_func = PeakSignalNoiseRatio(data_range=1.0).to(device)
+            # egras_func = ErrorRelativeGlobalDimensionlessSynthesis().to(device)
 
-    # def loss_cal2(output, device):
+            ssim_loss = 1 - SSIM_func(output, input)
+            ms_ssim_loss = 1 - MS_SSIM_func(output, input)
+            psnr_loss = 1 - PSNR_func(output, input)/20 #minimum 20 decibel
+            # egras_loss = egras_func(output, input)
+            # vif_loss = piq.VIFLoss(sigma_n_sq=2.0, data_range=256.)(input, output)
 
-    #     # loss_func = pyiqa.create_metric('clipiqa', device=device, as_loss=True)
-    #     # hyperiqa_func = pyiqa.create_metric('hyperiqa', device=device, as_loss=True)
-    #     loss_func = pyiqa.create_metric('brisque', device=device, as_loss=True)
+            return ssim_loss, ms_ssim_loss, psnr_loss
 
-    #     loss_nr = loss_func(output)/100
-    #     # hyperiqa_loss = hyperiqa_func(output)
+        # def loss_cal2(output, device):
 
-    #     return loss_nr
+        #     brisque_loss = piq.BRISQUELoss(data_range=256., reduction='none')(output)
 
-    ssim_loss_vis, ms_ssim_loss_vis, psnr_loss_vis = loss_cal1(vis_image, output_image, device)
-    ssim_loss_ir, ms_ssim_loss_ir, psnr_loss_ir = loss_cal1(ir_image, output_image, device)
+        #     return brisque_loss
 
-    ssim_loss_avg = (ssim_loss_vis + ssim_loss_ir)/2
-    ms_ssim_loss_avg = (ms_ssim_loss_vis + ms_ssim_loss_ir)/2
-    psnr_loss_avg = (psnr_loss_vis + psnr_loss_ir)/2
+        ssim_loss_vis, ms_ssim_loss_vis, psnr_loss_vis = loss_cal1(vis_image, output_image, device)
+        ssim_loss_ir, ms_ssim_loss_ir, psnr_loss_ir = loss_cal1(ir_image, output_image, device)
 
-    loss_nr = loss_cal2(output_image, device)
+        ssim_loss_max = torch.maximum(ssim_loss_vis, ssim_loss_ir)
+        ms_ssim_loss_max = torch.maximum(ms_ssim_loss_vis, ms_ssim_loss_ir)
+        psnr_loss_max = torch.maximum(psnr_loss_vis, psnr_loss_ir)
 
-    loss = (ssim_loss_avg + ms_ssim_loss_avg + psnr_loss_avg + loss_nr)/4
+        loss = ssim_loss_max+ms_ssim_loss_max+psnr_loss_max
 
-    # print('Loss:',loss, ssim_loss_avg, ms_ssim_loss_avg, psnr_loss_avg, clipiqa_loss)
+        # print('LOSS {} {} {} {} {}'.format(loss, ssim_loss_avg, ms_ssim_loss_avg, psnr_loss_avg, egras_loss_avg))
 
-    return loss, ssim_loss_avg, ms_ssim_loss_avg, psnr_loss_avg, loss_nr
+        return loss, ssim_loss_max, ms_ssim_loss_max, psnr_loss_max
+
+
+    def forward(self, vis_image, ir_image , output_image, device):
+        loss, ssim_loss_avg, ms_ssim_loss_avg, psnr_loss_avg = self.loss_function(vis_image, ir_image, output_image, device)
+        return loss, ssim_loss_avg, ms_ssim_loss_avg, psnr_loss_avg
+
+
+
