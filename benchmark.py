@@ -1,9 +1,5 @@
 from torchmetrics.image import StructuralSimilarityIndexMeasure, PeakSignalNoiseRatio, MultiScaleStructuralSimilarityIndexMeasure, ErrorRelativeGlobalDimensionlessSynthesis 
 import torch.nn as nn
-import piq
-import piqa 
-import pyiqa 
-
 
 class CustomBenchmark(nn.Module):
     def __init__(self):

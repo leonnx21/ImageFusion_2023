@@ -1,4 +1,4 @@
-from model_visdrone4 import Fusionmodel
+from model_visdrone6 import Fusionmodel
 from test import loader_function, test_fusion
 from benchmark import CustomBenchmark
 import torch
@@ -10,9 +10,9 @@ if __name__ == '__main__':
 
     model = Fusionmodel().to(device)
     loss_function = CustomBenchmark().to(device)
-    name = 'CBD4'
+    name = 'CBD6'
 
-    model_path = "Trained/CBD4/trained_model/model_best_val_20230919_152608_27"
+    model_path = "Trained/CBD6/trained_model/best_val/model_best_val_20230927_065946_3"
 
     test_loader1 = loader_function( 'Original_test_image', 'VIS', 'IR')
     save_dir1 =  "Tested/Output_test/"

@@ -1,11 +1,27 @@
+from random import shuffle
 import torchvision.transforms as transforms
 import os
 from PIL import Image
 import numpy as np
 from pathlib import Path  
-
+import torch
+from RandomSplit_data import random_split
 from torchvision.datasets.folder import default_loader
 from torchvision.datasets.vision import VisionDataset
+
+def loader_function(root, sub1, sub2, batchsize=8):
+    Data_set = CustomVisionDataset_train(root, sub1, sub2)
+    
+    gen = torch.Generator()
+    gen.manual_seed(42) #for consistency
+
+    train_data, val_data = random_split (Data_set, [0.9,0.1], generator=gen)
+
+    Train_Loader = torch.utils.data.DataLoader(train_data, batch_size=batchsize, shuffle=True)
+
+    Val_loader = torch.utils.data.DataLoader(val_data, batch_size=batchsize)
+    
+    return Train_Loader, Val_loader
 
 def make_dataset(root: str, sub1: str, sub2: str) -> list:
     """Reads a directory with data.

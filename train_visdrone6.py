@@ -1,8 +1,11 @@
 import torch
 from model_visdrone6 import Fusionmodel
 from train import train
-from utils import CustomVisionDataset_train
+from utils import CustomVisionDataset_train, loader_function
 from loss_fn2 import CustomLoss
+from torch.optim.lr_scheduler import ReduceLROnPlateau
+from RandomSplit_data import random_split
+
 
 ################################################################
 #IMPORTANT
@@ -12,46 +15,44 @@ from loss_fn2 import CustomLoss
 ################################################################
 
 
-def loader_function(root, sub1, sub2, batchsize=8, num_samples=0):
-    Data_set = CustomVisionDataset_train(root, sub1, sub2)
-    
-    if num_samples != 0:
-        random_sampler = torch.utils.data.RandomSampler(Data_set, num_samples=num_samples)
-        Loader = torch.utils.data.DataLoader(Data_set, batch_size=batchsize, sampler=random_sampler)
-    else:
-        Loader = torch.utils.data.DataLoader(Data_set, batch_size=batchsize, shuffle=True)
-    return Loader
-
-
 if __name__ == '__main__':
 
     device = 'cuda'
     model = Fusionmodel().to(device)
-    lr = 1e-3
+    lr = 0.0001
     epoch = 200
-    batchsize = 4
+    batchsize = 8
     
     #report batch
-    report_freq = 100   
+    report_freq = 1000  
 
-    train_sample = 0 #0 for all samples
-    validation_sample = 2000
+    training_loader, validation_loader = loader_function( '/storage/locnx/CBD/train/', 'VIS', 'IR', batchsize=batchsize)
 
-    optimizer = torch.optim.Adam(model.parameters(), lr = lr)
-    loss_function = CustomLoss().to(device)
-
-    # training_loader = loader_function( '/storage/locnx/COCO2014/', '1000files', '1000files', batchsize=batchsize, num_samples=0)
-    # validation_loader = loader_function('/storage/locnx/COCO2014/', '100vals', '100vals', batchsize=batchsize, num_samples=0)
-    # train_path = './VISDRONE_3/trained_model/'
-    # writer_path = './VISDRONE_3/stats/'
-    # name = 'VISDRONE_3'
-
-    training_loader = loader_function( '/storage/locnx/CBD/train/', 'VIS', 'IR', batchsize=batchsize, num_samples=train_sample)
-    validation_loader = loader_function('/storage/locnx/CBD/val/', 'VIS', 'IR', batchsize=batchsize, num_samples=validation_sample)
     train_path = './Trained/CBD6/trained_model/'
     writer_path = './Trained/CBD6/stats/'
     name = 'CBD6'
 
-    train(name, model, train_path, writer_path, training_loader, validation_loader, optimizer, loss_function, epoch, device, report_freq)
+    optimizer = torch.optim.AdamW(model.parameters(), lr = lr)
+    loss_function = CustomLoss().to(device)
+
+    #traing new or resume    
+    training_new = True
+
+    if training_new == True:
+        train(name, model, train_path, writer_path, training_loader, validation_loader, optimizer, loss_function, epoch, device, report_freq)
+    else:
+        #provide path to resume 
+        checkpoint = torch.load("Trained/CBD4/trained_model/all_train/model_train_20230927_132202_6")
+        model.load_state_dict(checkpoint['model_state_dict'])
+        optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+        epoch_number = checkpoint['epoch']
+        epoch = epoch - epoch_number
+        best_tloss = checkpoint['best_tloss']
+        best_vloss = checkpoint['best_vloss']
+
+        train(name, model, train_path, writer_path, training_loader, validation_loader, optimizer, loss_function, epoch, device, report_freq, epoch_number, best_tloss, best_vloss)
+
+
+
 
     

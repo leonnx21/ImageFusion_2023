@@ -3,6 +3,7 @@ import torch
 from utils import mkdir
 from torch.utils.tensorboard import SummaryWriter
 from datetime import datetime
+from loss_fn2 import CustomLoss
 
 ################################################################
 #IMPORTANT
@@ -71,10 +72,13 @@ def train_one_epoch(name, model, training_loader, epoch_index, tb_writer, optimi
             running_loss_details[3] = 0.
 
         #report last average traing loss validation
-        training_loss_avg = training_loss/(i+1)
-        training_loss = 0.
 
-        # print("success training")
+        # scheduler.step()
+    
+    training_loss_avg = training_loss/(i+1)
+    training_loss = 0.
+
+    # print("success training")
 
     return training_loss_avg, last_loss_details[0]
 
@@ -119,12 +123,13 @@ def validation_function(name, model, validation_loader, loss_function, device, e
                 running_vloss_details[2] = 0.
                 running_vloss_details[3] = 0.
 
-    avg_vloss = validation_loss / (i + 1)
-    validation_loss = 0.
+        avg_vloss = validation_loss / (i + 1)
+        validation_loss = 0.
 
     return avg_vloss
 
-def train(name, model, train_path, writer_path, training_loader, validation_loader, optimizer, loss_function, epoch, device, report_freq):
+def train(name, model, train_path, writer_path, training_loader, validation_loader, optimizer, loss_function, epoch, device, report_freq, epoch_number=0, best_loss = 1000000. , best_vloss = 1000000.):
+
     best_train_path = os.path.join(train_path,'best_train/')
     best_val_path = os.path.join(train_path,'best_val/')
     all_train_path = os.path.join(train_path,'all_train/')
@@ -135,12 +140,13 @@ def train(name, model, train_path, writer_path, training_loader, validation_load
     
     timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
     writer = SummaryWriter(writer_path+'fusion_trainer_{}_{}'.format(name,timestamp))
-    epoch_number = 0
+    
+    epoch_number = epoch_number
 
     EPOCHS = epoch
 
-    best_loss = 1000000.
-    best_vloss = 1000000.
+    best_loss = best_loss
+    best_vloss = best_vloss
 
     for epoch in range(EPOCHS):
         print(name + ' EPOCH {}:'.format(epoch_number + 1))
@@ -186,7 +192,10 @@ def train(name, model, train_path, writer_path, training_loader, validation_load
             'epoch': epoch_number,
             'model_state_dict': model.state_dict(),
             'optimizer_state_dict': optimizer.state_dict(),
-            'loss': avg_loss,
+            'best_tloss': best_loss,
+            'best_vloss': best_vloss,
             }, model_tpath2)
 
         epoch_number += 1
+
+        
