@@ -7,13 +7,12 @@ def crop_func():
     new_width = 640
     new_height = 512
 
-    path = '/storage/locnx/VisDrone/val/valimgr/'
+    path = '/storage/locnx/VisDrone/test/Test2/IR'
     image_name = sorted(os.listdir(path))
-    save_path = '/storage/locnx/VisDrone/val/IR/'
+    save_path = '/storage/locnx/VisDrone/test/Test2/IR'
 
-
-    for i in image_name:
-        image_path = os.path.join(path, i)
+    for i, name in enumerate(image_name):
+        image_path = os.path.join(path, name)
 
         im = Image.open(image_path)
         width, height = im.size   # Get dimensions
@@ -25,8 +24,9 @@ def crop_func():
 
         # Crop the center of the image
         im = im.crop((left, top, right, bottom))
-        
-        image_save_path = os.path.join(save_path, i)
+        # new_filename = str(i)+".png"
+
+        image_save_path = os.path.join(save_path, name)
         
         print("saved:",image_save_path)
 

@@ -15,7 +15,7 @@ def loader_function(root, sub1, sub2, batchsize=8):
     gen = torch.Generator()
     gen.manual_seed(42) #for consistency
 
-    train_data, val_data = random_split (Data_set, [0.9,0.1], generator=gen)
+    train_data, val_data = random_split (Data_set, [0.8,0.2], generator=gen)
 
     Train_Loader = torch.utils.data.DataLoader(train_data, batch_size=batchsize, shuffle=True)
 

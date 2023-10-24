@@ -39,7 +39,7 @@ def test_fusion(name, model, model_path, benchmark_function, test_dataloader,sav
 
             print(i, name, vis_name, ssim_avg.item(), ms_ssim_avg.item(), psnr_avg.item(), egras_avg.item())
 
-            save_name = save_dir+str(vis_name)+"-"+str(ir_name)+'.png'
+            save_name = save_dir+ir_name[0]
             mkdir(save_dir)
 
             save_image(toutputs, save_name)

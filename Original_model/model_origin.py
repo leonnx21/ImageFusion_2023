@@ -98,13 +98,13 @@ class Decoder0(nn.Module):
         stride = 1
 
         # decoder
-        # self.conv2 = ConvLayer(nb_filter[1], nb_filter[1], kernel_size, stride)
+        self.conv2 = ConvLayer(nb_filter[1], nb_filter[1], kernel_size, stride)
         self.conv3 = ConvLayer(nb_filter[1], nb_filter[2], kernel_size, stride)
         self.conv4 = ConvLayer(nb_filter[2], nb_filter[3], kernel_size, stride)
         self.conv5 = ConvLayer(nb_filter[3], output_nc, kernel_size, stride)
 
     def forward(self, x):
-        # x = self.conv2(x)
+        x = self.conv2(x)
         x = self.conv3(x)
         x = self.conv4(x)
         output = self.conv5(x)
@@ -128,7 +128,7 @@ class Fusionmodel(nn.Module):
         return out
 
 if __name__ == '__main__':
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu") 
-    model = Fusionmodel().to(device)
-    summary(model,input_size=[(1, 128, 128), (1, 128, 128)])
+    # device = torch.device("cuda" if torch.cuda.is_available() else "cpu") 
+    model = Fusionmodel().to('cpu')
+    summary(model,input_data=[(1, 256, 256), (1, 256, 256)], col_names=["input_size", "output_size", "num_params", "kernel_size"], depth=1,  device = 'cpu')
 

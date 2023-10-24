@@ -17,7 +17,7 @@ def test():
     # _tensor = transforms.ToTensor()
     # _pil_gray = transforms.ToPILImage()
     os.environ["CUDA_VISIBLE_DEVICES"] = "1"
-    device = 'cuda'
+    device = 'cpu'
 
     model = Fusionmodel().to(device)
     checkpoint = torch.load('Original_model/models/1e2/Final_epoch_20__1e2.pkl')

@@ -128,7 +128,7 @@ def validation_function(name, model, validation_loader, loss_function, device, e
 
     return avg_vloss
 
-def train(name, model, train_path, writer_path, training_loader, validation_loader, optimizer, loss_function, epoch, device, report_freq, epoch_number=0, best_loss = 1000000. , best_vloss = 1000000.):
+def train(name, model, train_path, writer_path, training_loader, validation_loader, optimizer, loss_function, epoch, device, report_freq, epoch_number=0, best_loss = 1000000. , best_vloss = 1000000., timestamp=""):
 
     best_train_path = os.path.join(train_path,'best_train/')
     best_val_path = os.path.join(train_path,'best_val/')
@@ -138,7 +138,11 @@ def train(name, model, train_path, writer_path, training_loader, validation_load
     mkdir(best_val_path)
     mkdir(all_train_path)
     
-    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+    if timestamp=="":
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+    else:
+        timestamp = timestamp
+
     writer = SummaryWriter(writer_path+'fusion_trainer_{}_{}'.format(name,timestamp))
     
     epoch_number = epoch_number
@@ -194,6 +198,7 @@ def train(name, model, train_path, writer_path, training_loader, validation_load
             'optimizer_state_dict': optimizer.state_dict(),
             'best_tloss': best_loss,
             'best_vloss': best_vloss,
+            'time_stamp':timestamp,
             }, model_tpath2)
 
         epoch_number += 1
